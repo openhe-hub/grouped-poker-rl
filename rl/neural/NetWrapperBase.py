@@ -20,7 +20,6 @@ class NetWrapperBase:
         self._net = net
 
     def get_grads_one_batch_from_buffer(self, buffer):
-        print("!!!!!!!!!!!! get grade one batch from buffer")
         if buffer.size < self._args.batch_size:
             return
 

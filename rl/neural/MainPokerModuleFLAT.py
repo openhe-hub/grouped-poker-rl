@@ -40,7 +40,6 @@ class MainPokerModuleFLAT(nn.Module):
         self.priv_obs_size = self.env_bldr.priv_obs_size
 
         self._relu = nn.ReLU(inplace=False)
-        self.log_path = '/home/lanhou/Workspace/Deep-CFR/assets/debug/debug.log'
         self.bucket_feature = BucketFeature()
 
         if mpm_args.use_pre_layers:
@@ -153,26 +152,28 @@ class MainPokerModuleFLAT(nn.Module):
             suit = SUIT_REV_DICT[suit_index.item()]
             return f"{rank}{suit}"
         
-        hole_cards, board_cards = [], []
-        hole_cards_len, board_cards_len = 2, 5
+        results = []
         
-        for i in range(hole_cards_len):
-            card_obs = priv_obs[0][i * 17:(i + 1) * 17]
-            card = decode_card(card_obs)
-            if card:
-                hole_cards.append(card)
+        for priv, board in zip(priv_obs, board_obs):
+            hole_cards, board_cards = [], []
+            hole_cards_len, board_cards_len = 2, 5
+            
+            for i in range(hole_cards_len):
+                card_obs = priv[i * 17:(i + 1) * 17]
+                card = decode_card(card_obs)
+                if card:
+                    hole_cards.append(card)
 
-        for j in range(board_cards_len):
-            card_obs = board_obs[0][j * 17:(j + 1) * 17]
-            card = decode_card(card_obs)
-            if card:
-                board_cards.append(card)
-        
-        group_id = self.bucket_feature.query_group(hole_cards, board_cards)
-        return torch.tensor(group_id).to(device=self.device).view(1, 1)
-        
-        # with open(self.log_path, 'a') as fp:
-        #     fp.write(f"priv = {hole_cards}, board = {board_cards}, group id = {group_id}\n")
+            for j in range(board_cards_len):
+                card_obs = board[j * 17:(j + 1) * 17]
+                card = decode_card(card_obs)
+                if card:
+                    board_cards.append(card)
+            
+            group_id = self.bucket_feature.query_group(hole_cards, board_cards)
+            results.append(group_id)
+
+        return torch.tensor(results).to(device=self.device).view(-1, 1)
 
 class MPMArgsFLAT:
 
