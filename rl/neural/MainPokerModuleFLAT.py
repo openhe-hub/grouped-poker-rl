@@ -43,12 +43,12 @@ class MainPokerModuleFLAT(nn.Module):
         self.bucket_feature = BucketFeature()
 
         if mpm_args.use_pre_layers:
-            self._priv_cards = nn.Linear(in_features=self.env_bldr.priv_obs_size,
-                                         out_features=mpm_args.other_units)
-            self._board_cards = nn.Linear(in_features=self.env_bldr.obs_size_board,
-                                          out_features=mpm_args.other_units)
+            # self._priv_cards = nn.Linear(in_features=self.env_bldr.priv_obs_size,
+            #                              out_features=mpm_args.other_units)
+            # self._board_cards = nn.Linear(in_features=self.env_bldr.obs_size_board,
+            #                               out_features=mpm_args.other_units)
 
-            self.cards_fc_1 = nn.Linear(in_features=2 * mpm_args.other_units + 1, out_features=mpm_args.card_block_units)
+            self.cards_fc_1 = nn.Linear(in_features=39, out_features=mpm_args.card_block_units)
             self.cards_fc_2 = nn.Linear(in_features=mpm_args.card_block_units, out_features=mpm_args.card_block_units)
             self.cards_fc_3 = nn.Linear(in_features=mpm_args.card_block_units, out_features=mpm_args.other_units)
 
@@ -122,11 +122,13 @@ class MainPokerModuleFLAT(nn.Module):
         # """""""""""""""
         # Cards Body
         # """""""""""""""
-        group_id = self.revert_card_str(priv_obs, board_obs)
-        _priv_1 = self._relu(self._priv_cards(priv_obs))
-        _board_1 = self._relu(self._board_cards(board_obs))
+        group_tensor = self.encode_card_group(priv_obs, board_obs)
+        # print(priv_obs, board_obs, group_tensor)
+        # _priv_1 = self._relu(self._priv_cards(priv_obs))
+        # _board_1 = self._relu(self._board_cards(board_obs))
 
-        cards_out = self._relu(self.cards_fc_1(torch.cat([_priv_1, _board_1, group_id], dim=-1)))
+        # cards_out = self._relu(self.cards_fc_1(torch.cat([_priv_1, _board_1, group_id], dim=-1)))
+        cards_out = self._relu(self.cards_fc_1(group_tensor))
         cards_out = self._relu(self.cards_fc_2(cards_out) + cards_out)
         cards_out = self.cards_fc_3(cards_out)
 
@@ -135,7 +137,7 @@ class MainPokerModuleFLAT(nn.Module):
 
         return self._relu(torch.cat([cards_out, hist_and_state_out], dim=-1))
     
-    def revert_card_str(self, priv_obs, board_obs):
+    def encode_card_group(self, priv_obs, board_obs):
         RANK_DICT = {'2': 0, '3': 1, '4': 2, '5': 3, '6': 4, '7': 5, '8': 6, '9': 7, 'T': 8, 'J': 9, 'Q': 10, 'K': 11, 'A': 12}
         SUIT_DICT = {'h': 0, 'd': 1, 's': 2, 'c': 3}
         RANK_REV_DICT = {v: k for k, v in RANK_DICT.items()}
@@ -170,10 +172,11 @@ class MainPokerModuleFLAT(nn.Module):
                 if card:
                     board_cards.append(card)
             
-            group_id = self.bucket_feature.query_group(hole_cards, board_cards)
-            results.append(group_id)
+            group_tensor = self.bucket_feature.query_groups(hole_cards, board_cards)
+            results.append(group_tensor)
 
-        return torch.tensor(results).to(device=self.device).view(-1, 1)
+        results_2d = [t.unsqueeze(0) for t in results]
+        return torch.cat(results_2d, dim=0).to(device=self.device)
 
 class MPMArgsFLAT:
 
@@ -303,3 +306,26 @@ class BucketFeature:
             return -1
         else:
             return self.char_to_value[res[-1]]
+    
+    def query_groups(self, hole_cards, board_cards):
+        lengths = [10, 9, 10, 10]
+        board_card_num = [0, 3, 4, 5]
+        tensors = []
+        for num, length in zip(board_card_num, lengths):
+            curr_tensor = None
+            if num > len(board_cards):
+                curr_tensor = torch.zeros(length)
+            else:
+                curr_board_cards = board_cards[:num]
+                curr_tensor = self.num_to_tensor(
+                    self.query_group(hole_cards, curr_board_cards),
+                    length
+                )
+            tensors.append(curr_tensor)
+        
+        return torch.cat(tensors)
+    
+    def num_to_tensor(self, num, length):
+        tensor = torch.zeros(length)
+        tensor[num - 1] = 1
+        return tensor
