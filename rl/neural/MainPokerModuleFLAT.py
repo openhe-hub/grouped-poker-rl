@@ -203,8 +203,8 @@ import os
 
 class BucketFeature:
     def __init__(self):
-        self.db_folder_path = '/home/lanhou/Workspace/Deep-CFR/assets/db'
-        self.cache_path = '/home/lanhou/Workspace/Deep-CFR/assets/tmp/cache.json'
+        self.db_folder_path = './assets/db'
+        self.cache_path = './assets/tmp/cache.json'
         self.cache_data = {}
         self.value_to_char = {1: 'A', 2: 'B', 3: 'C', 4: 'D', 5: 'E', 6: 'F', 7: 'G', 8: 'H', 9: 'I', 10: 'J'}
         self.char_to_value = {v: k for k, v in self.value_to_char.items()}
