@@ -2,6 +2,7 @@
 
 
 import numpy as np
+import json
 import torch
 import torch.nn as nn
 
@@ -108,7 +109,9 @@ class MainPokerModuleFLAT(nn.Module):
             y = torch.cat((priv_obses, pub_obses,), dim=-1)
 
         final = self._relu(self.final_fc_1(y))
+        # use resnet
         final = self._relu(self.final_fc_2(final) + final)
+        # final = self._relu(self.final_fc_2(final))
 
         # Normalize last layer
         if self.args.normalize:
@@ -201,9 +204,15 @@ import os
 class BucketFeature:
     def __init__(self):
         self.db_folder_path = '/home/lanhou/Workspace/Deep-CFR/assets/db'
+        self.cache_path = '/home/lanhou/Workspace/Deep-CFR/assets/tmp/cache.json'
+        self.cache_data = {}
         self.value_to_char = {1: 'A', 2: 'B', 3: 'C', 4: 'D', 5: 'E', 6: 'F', 7: 'G', 8: 'H', 9: 'I', 10: 'J'}
         self.char_to_value = {v: k for k, v in self.value_to_char.items()}
         self.load_bucket()
+    
+    def refresh(self):
+        with open(self.cache_path, 'r') as f:
+            self.cache_data = json.load(f)
 
     def load_bucket(self):
         self.ref_data = [{} for i in range(8)]
@@ -270,7 +279,6 @@ class BucketFeature:
                     result.append(f"{card[:-1]}o") 
             return ''.join(result)
 
-
     def find(self, code, idx):
         def get_card_rank(card):
             ranks = '23456789TJQKA'
@@ -308,9 +316,15 @@ class BucketFeature:
             return self.char_to_value[res[-1]]
     
     def query_groups(self, hole_cards, board_cards):
+        self.refresh()
+        if self.cache_data['use_cache'] == True:
+            hole_cards = self.cache_data['hole_cards']
+            board_cards = self.cache_data['board_cards']
+        
         lengths = [10, 9, 10, 10]
         board_card_num = [0, 3, 4, 5]
         tensors = []
+        print(hole_cards, board_cards)
         for num, length in zip(board_card_num, lengths):
             curr_tensor = None
             if num > len(board_cards):

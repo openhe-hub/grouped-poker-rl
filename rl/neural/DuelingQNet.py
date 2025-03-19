@@ -29,7 +29,6 @@ class DuelingQNet(nn.Module):
 
     # === old code ===
     def forward(self, pub_obses, range_idxs, legal_action_masks):
-        
         shared_out = self._mpm(pub_obses=pub_obses, range_idxs=range_idxs)
 
         adv = self._get_adv(shared_out=shared_out, legal_action_masks=legal_action_masks)
