@@ -41,16 +41,17 @@ class MainPokerModuleFLAT(nn.Module):
         self.priv_obs_size = self.env_bldr.priv_obs_size
 
         self._relu = nn.ReLU(inplace=False)
-        self.dropout = nn.Dropout(p=0.2)
         self.bucket_feature = BucketFeature()
 
         if mpm_args.use_pre_layers:
+            # self._priv_cards = nn.Linear(in_features=self.env_bldr.priv_obs_size,
+            #                              out_features=mpm_args.other_units)
+            # self._board_cards = nn.Linear(in_features=self.env_bldr.obs_size_board,
+            #                               out_features=mpm_args.other_units)
+
             self.cards_fc_1 = nn.Linear(in_features=39, out_features=mpm_args.card_block_units)
             self.cards_fc_2 = nn.Linear(in_features=mpm_args.card_block_units, out_features=mpm_args.card_block_units)
-            self.cards_fc_3 = nn.Linear(in_features=mpm_args.card_block_units, out_features=mpm_args.card_block_units)
-            self.cards_fc_4 = nn.Linear(in_features=mpm_args.card_block_units, out_features=mpm_args.card_block_units)
-            self.cards_fc_5 = nn.Linear(in_features=mpm_args.card_block_units, out_features=mpm_args.card_block_units)
-            self.cards_fc_6 = nn.Linear(in_features=mpm_args.card_block_units, out_features=mpm_args.other_units)
+            self.cards_fc_3 = nn.Linear(in_features=mpm_args.card_block_units, out_features=mpm_args.other_units)
 
             self.hist_and_state_1 = nn.Linear(in_features=self.env_bldr.pub_obs_size - self.env_bldr.obs_size_board,
                                               out_features=mpm_args.other_units)
@@ -110,6 +111,7 @@ class MainPokerModuleFLAT(nn.Module):
         final = self._relu(self.final_fc_1(y))
         # use resnet
         final = self._relu(self.final_fc_2(final) + final)
+        # final = self._relu(self.final_fc_2(final))
 
         # Normalize last layer
         if self.args.normalize:
@@ -119,25 +121,20 @@ class MainPokerModuleFLAT(nn.Module):
         return final
 
     def _feed_through_pre_layers(self, priv_obs, board_obs, hist_and_state_obs):
-        # === cards ===
+
+        # """""""""""""""
+        # Cards Body
+        # """""""""""""""
         group_tensor = self.encode_card_group(priv_obs, board_obs)
+        # print(priv_obs, board_obs, group_tensor)
+        # _priv_1 = self._relu(self._priv_cards(priv_obs))
+        # _board_1 = self._relu(self._board_cards(board_obs))
 
+        # cards_out = self._relu(self.cards_fc_1(torch.cat([_priv_1, _board_1, group_id], dim=-1)))
         cards_out = self._relu(self.cards_fc_1(group_tensor))
-        # 1st residual block
-        residual = cards_out
-        cards_out = self._relu(self.cards_fc_2(cards_out))
-        cards_out = self.dropout(cards_out)
-        cards_out = self._relu(self.cards_fc_3(cards_out) + residual)
+        cards_out = self._relu(self.cards_fc_2(cards_out) + cards_out)
+        cards_out = self.cards_fc_3(cards_out)
 
-        # 2nd residual block
-        residual = cards_out
-        cards_out = self._relu(self.cards_fc_4(cards_out))
-        cards_out = self.dropout(cards_out)
-        cards_out = self._relu(self.cards_fc_5(cards_out) + residual)
-
-        cards_out = self.cards_fc_6(cards_out)
-
-        # === states ===
         hist_and_state_out = self._relu(self.hist_and_state_1(hist_and_state_obs))
         hist_and_state_out = self.hist_and_state_2(hist_and_state_out) + hist_and_state_out
 
@@ -327,7 +324,7 @@ class BucketFeature:
         lengths = [10, 9, 10, 10]
         board_card_num = [0, 3, 4, 5]
         tensors = []
-        # print(hole_cards, board_cards)
+        print(hole_cards, board_cards)
         for num, length in zip(board_card_num, lengths):
             curr_tensor = None
             if num > len(board_cards):
