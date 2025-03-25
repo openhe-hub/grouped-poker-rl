@@ -1,6 +1,6 @@
 # Copyright (c) 2019 Eric Steinberger
 
-
+import torch
 import torch.nn as nn
 
 

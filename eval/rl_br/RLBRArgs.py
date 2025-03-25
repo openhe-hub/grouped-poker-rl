@@ -58,7 +58,7 @@ class RLBRArgs:
                                   n_merge_and_table_layer_units=n_merge_and_table_layer_units)
 
         elif nn_type == "feedforward":
-            from PokerRL.rl.neural.MainPokerModuleFLAT import MPMArgsFLAT
+            from PokerRL.rl.neural.new import MPMArgsFLAT
 
             mpm_args = MPMArgsFLAT(use_pre_layers=use_pre_layers,
                                    card_block_units=n_cards_state_units,
