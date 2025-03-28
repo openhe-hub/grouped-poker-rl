@@ -35,7 +35,7 @@ class FlatLimitPokerEnvBuilder(_EnvWrapperBuilderBase):
 
     def __init__(self, env_cls, env_args):
         # assert env_cls.IS_FIXED_LIMIT_GAME
-        assert env_args.n_seats == 2
+        # assert env_args.n_seats == 2
 
         self._VEC_ROUND_OFFSETS = {}
         self._VEC_HALF_ROUND_SIZE = {}
